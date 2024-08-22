@@ -1,38 +1,50 @@
 import os
 import time
 
-start_time=time.time()
-total=len(os.listdir())
-print(total)
-log_data=[]
+def timing_wrapper(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        use_time = end_time - start_time
+        print(f"[TIME] {func.__name__} took {use_time:.2f}s")
+        return result
+    return wrapper
 
-lst_file=[]
+@timing_wrapper
+def get_file_list(directory):
+    return os.listdir(directory)
 
-count=0
-for i in os.listdir():
-    if count<10:
-        lst_file.append(i)
-        print(f"[{count+1}/{total}] {i}")
-        count+=1
+@timing_wrapper
+def read_files(file_list):
+    log_data = []
+    for file_name in file_list:
+        with open(file_name, "r", encoding="UTF-8") as file:
+            log_data.extend(file.read().split("\n"))
+    return log_data
 
+@timing_wrapper
+def write_log(log_data, output_file):
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write("\n".join(log_data))
 
-for i in lst_file:
-    with open(i,"r",encoding="UTF-8") as f:
-        tmp_data=f.read().split("\n")
-        for i in tmp_data:
-            log_data.append(i)
+@timing_wrapper
+def main():
+    directory = "."
+    file_list = get_file_list(directory)
+    total_files = len(file_list)
+    print(f"[INFO] Total files: {total_files}")
 
-print(len(log_data))
+    files_to_process = file_list[:10]
+    for count, file_name in enumerate(files_to_process, start=1):
+        print(f"[READ] [{count}/{total_files}] {file_name}")
 
-with open("p.log","w",encoding="utf-8") as f:
-    f.write("\n".join(log_data))
+    log_data = read_files(files_to_process)
+    print(f"[INFO] Total log lines: {len(log_data)}")
 
-end_time=time.time()
-use_time=end_time-start_time
-print(f"use {use_time}s")
+    output_file = "p.log"
+    write_log(log_data, output_file)
+    
 
-请你优化这段代码
-
-1. 全都用wrapper来对函数计时，提供一个main函数
-2. 优化变量名令其更规则，更有规律，更易懂
-3. 无需使用try-exception
+if __name__ == "__main__":
+    main()
