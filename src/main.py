@@ -1,18 +1,20 @@
+import json
 import os
 import time
-import json
+from typing import Optional, Union
 
 WORK_DIR = os.path.join(
     os.environ.get("USERPROFILE"), ".aliyun-oss-log-parser"
 )
 DATA_FILE = "data.log"
 
-file_thershold = 0
+
+
 
 def get_config():
-    default_config={
-        "data_dir":"/root",
-        "file_threshold":"0",
+    default_config = {
+        "data_dir": "/root",
+        "file_threshold": 0,
     }
     config_path = os.path.join(WORK_DIR, "config.json")
     if os.path.exists(config_path):
@@ -21,8 +23,17 @@ def get_config():
         return config
     else:
         with open(config_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(default_config,ensure_ascii=False,indent=2,sort_keys=True))
+            f.write(
+                json.dumps(
+                    default_config,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
         return default_config
+
+
 
 
 def get_working_dir():
@@ -58,16 +69,22 @@ def timing_wrapper(func):
 
 
 @timing_wrapper
-def main():
+def main()->Optional[Union[dict, str]]:
     DATA_DIR = get_config()["data_dir"]
     file_list = get_file_list(DATA_DIR)
     file_total = len(file_list)
     print(f"[INFO] Total files: {file_total}")
 
+    mode_output=get_config().get("mode_output",None) if get_config().get("mode_output",None) else ".log"
+    flag_rapid=get_config().get("flag_rapid",None) if get_config().get("flag_rapid",None) else False
+
+    # mode_output: .log/.csv/.json
+
     log_data = []
+    file_threshold = get_config()["file_threshold"]
     for count_file, file_name in enumerate(
         file_list[
-            : (file_thershold if file_thershold != 0 else len(file_list))
+            : (file_threshold if file_threshold != 0 else len(file_list))
         ],
         start=1,
     ):
@@ -77,7 +94,8 @@ def main():
             raw_data = file.read().split("\n")
             # raw_data=list(filter(bool,raw_data))
             log_data.extend(raw_data[:-1])
-            print(f"[READ]: ({count_file}/{file_total}) = {file_name}")
+            if flag_rapid is not True:
+                print(f"[READ]: ({count_file}/{file_total}) = {file_name}")
 
     print(f"[INFO]: Total log lines = {len(log_data)}")
 
