@@ -1,27 +1,28 @@
 import os
 import time
 
-WORK_DIR = "."
-output_file = "data.log"
+DATA_DIR = "."
+WORK_DIR = os.path.join(os.environ.get("USERPROFILE"),".aliyun-oss-log-parser")
+DATA_FILE = "data.log"
 
 
 def get_working_dir():
-    if os.path.exists(".env"):
-        with open(".env", "r", encoding="utf-8") as f:
-            WORK_DIR = f.read()
-    return WORK_DIR
+    env_path=os.path.join(WORK_DIR,".env")
+    print(env_path)
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            DATA_DIR = f.read()
+    return DATA_DIR
 
 def get_file_list(dir):
     f_list_raw=os.listdir(dir)
     f_list=[]
     for i in f_list_raw:
 
-        if os.path.isdir(os.path.join(WORK_DIR,i)):
+        if os.path.isdir(os.path.join(DATA_DIR,i)):
             pass
         else:
             f_list.append(i)
-    print(f_list[0])
-    print(len(f_list))
     return f_list
 
 
@@ -40,8 +41,8 @@ def timing_wrapper(func):
 
 @timing_wrapper
 def main():
-    WORK_DIR = get_working_dir()
-    file_list = get_file_list(WORK_DIR)
+    DATA_DIR = get_working_dir()
+    file_list = get_file_list(DATA_DIR)
     file_total = len(file_list)
     print(f"[INFO] Total files: {file_total}")
 
@@ -49,7 +50,7 @@ def main():
     log_data = []
     for count, file_name in enumerate(file_list[:file_thershold], start=1):
         with open(
-            os.path.join(WORK_DIR, file_name), "r", encoding="UTF-8"
+            os.path.join(DATA_DIR, file_name), "r", encoding="UTF-8"
         ) as file:
             raw_data = file.read().split("\n")
             # raw_data=list(filter(bool,raw_data))
@@ -58,10 +59,10 @@ def main():
 
     print(f"[INFO]: Total log lines = {len(log_data)}")
 
-    if os.path.exists(os.path.join(WORK_DIR, "data"))==False:
-        os.mkdir(os.path.join(WORK_DIR, "data"))
+    if os.path.exists(WORK_DIR)==False:
+        os.mkdir(WORK_DIR)
     with open(
-        os.path.join(WORK_DIR, "data", output_file), "w", encoding="utf-8"
+        os.path.join(WORK_DIR, DATA_FILE), "w", encoding="utf-8"
     ) as file:
         file.write("\n".join(log_data))
 
