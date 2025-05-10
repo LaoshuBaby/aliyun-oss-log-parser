@@ -1,7 +1,10 @@
 import json
 import os
+import re
 import time
 from typing import Optional, Union
+
+import pandas as pd
 
 WORK_DIR = os.path.join(
     os.environ.get("USERPROFILE"), ".aliyun-oss-log-parser"
@@ -9,12 +12,12 @@ WORK_DIR = os.path.join(
 DATA_FILE = "data.log"
 
 
-
-
 def get_config():
     default_config = {
         "data_dir": "/root",
         "file_threshold": 0,
+        "mode_output": ".log",
+        "flag_rapid": False,
     }
     config_path = os.path.join(WORK_DIR, "config.json")
     if os.path.exists(config_path):
@@ -32,8 +35,6 @@ def get_config():
                 )
             )
         return default_config
-
-
 
 
 def get_working_dir():
@@ -69,14 +70,22 @@ def timing_wrapper(func):
 
 
 @timing_wrapper
-def main()->Optional[Union[dict, str]]:
+def main() -> Optional[Union[dict, str]]:
     DATA_DIR = get_config()["data_dir"]
     file_list = get_file_list(DATA_DIR)
     file_total = len(file_list)
     print(f"[INFO] Total files: {file_total}")
 
-    mode_output=get_config().get("mode_output",None) if get_config().get("mode_output",None) else ".log"
-    flag_rapid=get_config().get("flag_rapid",None) if get_config().get("flag_rapid",None) else False
+    mode_output = (
+        get_config().get("mode_output", None)
+        if get_config().get("mode_output", None)
+        else ".log"
+    )
+    flag_rapid = (
+        get_config().get("flag_rapid", None)
+        if get_config().get("flag_rapid", None)
+        else False
+    )
 
     # mode_output: .log/.csv/.json
 
@@ -99,12 +108,32 @@ def main()->Optional[Union[dict, str]]:
 
     print(f"[INFO]: Total log lines = {len(log_data)}")
 
+    if mode_output == ".log":
+        output_data = "\n".join(log_data)
+    elif mode_output == ".csv":
+        # import pandas
+        columns = ['ip', 'datetime', 'method', 'url', 'protocol', 'status', 'size', 'time', 'referer', 'user_agent', 'bucket', 'request_id', 'is_authenticated', 'operation', 'resource', 'object_key', 'backend_time', 'error_code', 'total_time', 'request_time', 'storage_class']
+        data = []
+        pattern = r'(?P<ip>\d+\.\d+\.\d+\.\d+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>[A-Z]+) (?P<url>[^ ]+) (?P<protocol>[^"]+)" (?P<status>\d+) (?P<size>\d+) (?P<time>\d+) "(?P<referer>[^"]+)" "(?P<user_agent>[^"]+)" "(?P<bucket>[^"]+)" "(?P<request_id>[^"]+)" "(?P<is_authenticated>[^"]+)" "-" "(?P<operation>[^"]+)" "(?P<resource>[^"]+)" "(?P<object_key>[^"]+)" - (?P<backend_time>\d+) "(?P<error_code>[^"]*)" (?P<total_time>\d+) "(?P<request_time>\d+)" - "-" "(?P<storage_class>[^"]+)" "-" "-" "-"'
+
+
+        for line in log_data:
+            match = re.match(pattern, line)
+            if match:
+                data.append(match.groups())
+
+        df = pd.DataFrame(data, columns=columns)
+        print(df)
+        output_data=str(df)
+    elif mode_output == ".json":
+        import pandas
+
     if os.path.exists(WORK_DIR) == False:
         os.mkdir(WORK_DIR)
     with open(
         os.path.join(WORK_DIR, DATA_FILE), "w", encoding="utf-8"
     ) as file:
-        file.write("\n".join(log_data))
+        file.write(output_data)
 
 
 if __name__ == "__main__":
