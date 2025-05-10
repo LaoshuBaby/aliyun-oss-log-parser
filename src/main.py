@@ -1,13 +1,28 @@
 import os
 import time
+import json
 
-DATA_DIR = "."
 WORK_DIR = os.path.join(
     os.environ.get("USERPROFILE"), ".aliyun-oss-log-parser"
 )
 DATA_FILE = "data.log"
 
 file_thershold = 0
+
+def get_config():
+    default_config={
+        "data_dir":"/root",
+        "file_threshold":"0",
+    }
+    config_path = os.path.join(WORK_DIR, "config.json")
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.loads(f.read())
+        return config
+    else:
+        with open(config_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(default_config,ensure_ascii=False,indent=2,sort_keys=True))
+        return default_config
 
 
 def get_working_dir():
@@ -23,8 +38,7 @@ def get_file_list(dir):
     f_list_raw = os.listdir(dir)
     f_list = []
     for i in f_list_raw:
-
-        if os.path.isdir(os.path.join(DATA_DIR, i)):
+        if os.path.isdir(os.path.join(WORK_DIR, i)):
             pass
         else:
             f_list.append(i)
@@ -45,7 +59,7 @@ def timing_wrapper(func):
 
 @timing_wrapper
 def main():
-    DATA_DIR = get_working_dir()
+    DATA_DIR = get_config()["data_dir"]
     file_list = get_file_list(DATA_DIR)
     file_total = len(file_list)
     print(f"[INFO] Total files: {file_total}")
